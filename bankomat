@@ -1,0 +1,56 @@
+@startuml
+title Блокировка карты при подозрительной операции
+actor "Клиент" as Client
+actor "Мошенник" as Fraudster
+participant "Банкомат" as ATM
+participant "Считыватель карт" as Reader
+participant "Банковская система" as Bank
+participant "Система безопасности" as Security
+participant "Служба мониторинга" as Monitoring
+database "База подозрительных операций" as FraudDB
+
+Fraudster -> ATM: Вставить карту
+ATM -> Reader: Считать карту
+Reader --> ATM: Данные карты
+
+ATM -> Fraudster: Запрос PIN-кода
+Fraudster -> ATM: Ввести неверный PIN (попытка 1)
+ATM -> Bank: Отправить на проверку
+Bank -> Security: Проверить попытку
+Security --> Bank: Неверный PIN
+
+ATM -> Fraudster: "Неверный PIN, попробуйте снова"
+Fraudster -> ATM: Ввести неверный PIN (попытка 2)
+ATM -> Bank: Отправить на проверку
+Bank -> Security: Оповестить о повторной ошибке
+Security --> Bank: Вторая ошибка
+
+ATM -> Fraudster: "Неверный PIN, осталась 1 попытка"
+Fraudster -> ATM: Ввести неверный PIN (попытка 3)
+
+ATM -> Bank: Отправить данные 3-й попытки
+Bank -> Security: Третья ошибка PIN
+Security -> Bank: Карта под подозрением
+
+Bank -> Monitoring: Уведомить о возможном мошенничестве
+Monitoring -> FraudDB: Записать событие
+FraudDB --> Monitoring: Записано
+
+Bank -> ATM: Команда на изъятие карты
+ATM -> Reader: Заблокировать карту в считывателе
+Reader --> ATM: Карта заблокирована
+
+ATM -> Bank: Карта изъята
+Bank -> Security: Заблокировать карту в системе
+Security --> Bank: Карта заблокирована
+
+ATM -> Fraudster: "Карта изъята. Обратитесь в банк."
+Bank -> Monitoring: Отправить детали инцидента
+Monitoring --> Bank: Инцидент зарегистрирован
+
+note right of Monitoring
+    Служба безопасности банка
+    получает уведомление и
+    начинает расследование
+end note
+@enduml
